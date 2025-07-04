@@ -1,7 +1,7 @@
 import json
 import os
-from datetime import datetime
 import discord
+from datetime import datetime
 
 FILE_PATH = "Data/Sec_Leaderboard.json"
 

@@ -3,8 +3,6 @@ import random
 import asyncio
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime
-
 from Utilities.Leaderboard import (
     add_recent_winner, get_recent_winners, reset_leaderboard,
     is_leaderboard_full, set_last_leaderboard
@@ -68,7 +66,7 @@ class Guess_no(commands.Cog):
 
         await interaction.followup.send("🔓 **The game has started! You can now guess the number!**")
 
-        # ✅ Store the hint task
+
         task = self.bot.loop.create_task(self.send_hints(interaction.channel.id, secret_number, max_number, interaction.channel))
         self.hint_tasks[interaction.channel.id] = task
 
@@ -134,7 +132,7 @@ class Guess_no(commands.Cog):
 
         number = self.active_games[interaction.channel.id]["number"]
 
-        # ✅ Cancel hint task
+      
         task = self.hint_tasks.pop(interaction.channel.id, None)
         if task and not task.done():
             task.cancel()
