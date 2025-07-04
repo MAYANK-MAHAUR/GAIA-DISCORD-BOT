@@ -50,7 +50,7 @@ All games support:
 
 - **Language**: Python 3.11+
 - **Library**: [discord.py v2.5.2](https://pypi.org/project/discord.py/)
-- **Hosting**: used my laptop as local server
+- **Hosting**: For now used my Laptop as local server
 - **Storage**: JSON files (for leaderboard, questions, etc.)
 - **Structure**: Fully modular Cogs (`cogs/` folder)
 
