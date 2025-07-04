@@ -32,15 +32,15 @@ class LeaderboardresetCommands(commands.Cog):
         await interaction.response.send_message("✅ Secondary leaderboard has been reset.", ephemeral=True)
 
 
-        @app_commands.command(name="resetleaderboards", description="Reset both the final and secondary leaderboards.")
-        async def reset_both_leaderboards(self, interaction: discord.Interaction):
-            if not self.has_allowed_role(interaction):
-                await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
-                return
+    @app_commands.command(name="resetleaderboards", description="Reset both the final and secondary leaderboards.")
+    async def reset_both_leaderboards(self, interaction: discord.Interaction):
+        if not self.has_allowed_role(interaction):
+            await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+            return
 
-            Leaderboard.reset_leaderboard()
-            Sec_Leaderboard.reset_second_leaderboard()
-            await interaction.response.send_message("✅ Both leaderboards (final and secondary) have been reset.", ephemeral=True)
+        Leaderboard.reset_leaderboard()
+        Sec_Leaderboard.reset_second_leaderboard()
+        await interaction.response.send_message("✅ Both leaderboards (final and secondary) have been reset.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(LeaderboardresetCommands(bot))
