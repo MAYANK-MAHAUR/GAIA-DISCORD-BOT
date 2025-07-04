@@ -7,16 +7,16 @@
 ## 🔧 Features
 
 ### 🛡️ Moderation
-- `/kick` — Kick a member from the server
-- `/ban` — Ban a member permanently
-- `/mute` & `/unmute` — Temporarily silence a member
-- `/warn` — Warn users (3 warnings = auto-ban)
-- `/unban` — Unban by user ID
-- `/lockchannel` & `/unlockchannel` — Lock/unlock chat
-- `/nickname` — Change a user’s nickname
-- `/slowmode` — Add message cooldowns
-- `/purge` — Bulk delete messages
-- `/role` — Add or remove a role
+- `!kick` — Kick a member from the server
+- `!ban` — Ban a member permanently
+- `!mute` & `!unmute` — Temporarily silence a member
+- `!warn` — Warn users (3 warnings = auto-ban)
+- `!unban` — Unban by user ID
+- `!lockchannel` & `!unlockchannel` — Lock/unlock chat
+- `!nickname` — Change a user’s nickname
+- `!slowmode` — Add message cooldowns
+- `!purge` — Bulk delete messages
+- `!role` — Add or remove a role
 - 🔒 All actions are **logged** in a mod log channel
 
 ---
