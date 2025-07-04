@@ -50,7 +50,7 @@ All games support:
 
 - **Language**: Python 3.11+
 - **Library**: [discord.py v2.5.2](https://pypi.org/project/discord.py/)
-- **Hosting**: Replit and uptimerobot (24/7 free bot hosting)
+- **Hosting**: used my laptop as local server
 - **Storage**: JSON files (for leaderboard, questions, etc.)
 - **Structure**: Fully modular Cogs (`cogs/` folder)
 
