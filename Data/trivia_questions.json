@@ -1,0 +1,362 @@
+[
+  {
+    "question": "What is the capital of India?",
+    "answer": "Delhi"
+  },
+  {
+    "question": "Which planet is closest to the Sun?",
+    "answer": "Mercury"
+  },
+  {
+    "question": "What gas do plants breathe in?",
+    "answer": "Carbon Dioxide"
+  },
+  {
+    "question": "Which animal is known as the King of the Jungle?",
+    "answer": "Lion"
+  },
+  {
+    "question": "What is H2O commonly known as?",
+    "answer": "Water"
+  },
+  {
+    "question": "How many continents are there?",
+    "answer": "Seven"
+  },
+  {
+    "question": "Which organ pumps blood?",
+    "answer": "Heart"
+  },
+  {
+    "question": "What do bees make?",
+    "answer": "Honey"
+  },
+  {
+    "question": "How many legs does a spider have?",
+    "answer": "Eight"
+  },
+  {
+    "question": "Which month has 28 or 29 days?",
+    "answer": "February"
+  },
+  {
+    "question": "What is the color of the sky on a clear day?",
+    "answer": "Blue"
+  },
+  {
+    "question": "What is 2 + 2?",
+    "answer": "4"
+  },
+  {
+    "question": "Which fruit is yellow and curved?",
+    "answer": "Banana"
+  },
+  {
+    "question": "What do cows drink?",
+    "answer": "Water"
+  },
+  {
+    "question": "What color are bananas?",
+    "answer": "Yellow"
+  },
+  {
+    "question": "Which bird cannot fly?",
+    "answer": "Ostrich"
+  },
+  {
+    "question": "Which day comes after Friday?",
+    "answer": "Saturday"
+  },
+  {
+    "question": "Which season is the coldest?",
+    "answer": "Winter"
+  },
+  {
+    "question": "What do you use to write on a blackboard?",
+    "answer": "Chalk"
+  },
+  {
+    "question": "What is the largest mammal?",
+    "answer": "Blue Whale"
+  },
+  {
+    "question": "What color is the sun?",
+    "answer": "Yellow"
+  },
+  {
+    "question": "What comes after Monday?",
+    "answer": "Tuesday"
+  },
+  {
+    "question": "What is the opposite of cold?",
+    "answer": "Hot"
+  },
+  {
+    "question": "Which animal barks?",
+    "answer": "Dog"
+  },
+  {
+    "question": "Which animal purrs?",
+    "answer": "Cat"
+  },
+  {
+    "question": "What is the primary ingredient in bread?",
+    "answer": "Flour"
+  },
+  {
+    "question": "What shape has three sides?",
+    "answer": "Triangle"
+  },
+  {
+    "question": "What shape has four equal sides?",
+    "answer": "Square"
+  },
+  {
+    "question": "What planet do we live on?",
+    "answer": "Earth"
+  },
+  {
+    "question": "What color is grass?",
+    "answer": "Green"
+  },
+  {
+    "question": "Which fruit is red and has seeds on the outside?",
+    "answer": "Strawberry"
+  },
+  {
+    "question": "What is the name of our galaxy?",
+    "answer": "Milky Way"
+  },
+  {
+    "question": "How many wheels does a bicycle have?",
+    "answer": "Two"
+  },
+  {
+    "question": "How many hours are in a day?",
+    "answer": "24"
+  },
+  {
+    "question": "How many days are in a week?",
+    "answer": "7"
+  },
+  {
+    "question": "What do you call a baby dog?",
+    "answer": "Puppy"
+  },
+  {
+    "question": "What do you call a baby cat?",
+    "answer": "Kitten"
+  },
+  {
+    "question": "What is ice made of?",
+    "answer": "Water"
+  },
+  {
+    "question": "Which planet is known as the Red Planet?",
+    "answer": "Mars"
+  },
+  {
+    "question": "What do we breathe in?",
+    "answer": "Oxygen"
+  },
+  {
+    "question": "What color is coal?",
+    "answer": "Black"
+  },
+  {
+    "question": "What color are clouds?",
+    "answer": "White"
+  },
+  {
+    "question": "What organ helps us see?",
+    "answer": "Eye"
+  },
+  {
+    "question": "What organ helps us smell?",
+    "answer": "Nose"
+  },
+  {
+    "question": "What organ helps us hear?",
+    "answer": "Ear"
+  },
+  {
+    "question": "What is the opposite of night?",
+    "answer": "Day"
+  },
+  {
+    "question": "What is the opposite of up?",
+    "answer": "Down"
+  },
+  {
+    "question": "What is the opposite of left?",
+    "answer": "Right"
+  },
+  {
+    "question": "Which animal has a long trunk?",
+    "answer": "Elephant"
+  },
+  {
+    "question": "Which animal has a long neck?",
+    "answer": "Giraffe"
+  },
+  {
+    "question": "What is the largest ocean on Earth?",
+    "answer": "Pacific"
+  },
+  {
+    "question": "What language is primarily spoken in Brazil?",
+    "answer": "Portuguese"
+  },
+  {
+    "question": "What is the tallest mountain in the world?",
+    "answer": "Everest"
+  },
+  {
+    "question": "Which continent is the Sahara Desert located in?",
+    "answer": "Africa"
+  },
+  {
+    "question": "What is the freezing point of water in Celsius?",
+    "answer": "0"
+  },
+  {
+    "question": "What is the currency of Japan?",
+    "answer": "Yen"
+  },
+  {
+    "question": "What do you call molten rock after a volcano erupts?",
+    "answer": "Lava"
+  },
+  {
+    "question": "Which planet has rings?",
+    "answer": "Saturn"
+  },
+  {
+    "question": "What is the hardest natural substance?",
+    "answer": "Diamond"
+  },
+  {
+    "question": "Who invented the lightbulb?",
+    "answer": "Edison"
+  },
+  {
+    "question": "What is the smallest planet in our solar system?",
+    "answer": "Mercury"
+  },
+  {
+    "question": "What is the capital of France?",
+    "answer": "Paris"
+  },
+  {
+    "question": "What gas do humans breathe out?",
+    "answer": "CarbonDioxide"
+  },
+  {
+    "question": "What country is known for pizza?",
+    "answer": "Italy"
+  },
+  {
+    "question": "What is the largest land animal?",
+    "answer": "Elephant"
+  },
+  {
+    "question": "Which organ helps with digestion and produces insulin?",
+    "answer": "Pancreas"
+  },
+  {
+    "question": "What instrument has 88 keys?",
+    "answer": "Piano"
+  },
+  {
+    "question": "What is the name of the fairy in Peter Pan?",
+    "answer": "Tinkerbell"
+  },
+  {
+    "question": "What color is a ripe tomato?",
+    "answer": "Red"
+  },
+  {
+    "question": "How many bones are in the human body?",
+    "answer": "206"
+  },
+  {
+    "question": "Which animal is known for jumping and has long ears?",
+    "answer": "Rabbit"
+  },
+  {
+    "question": "Which planet is known for its Great Red Spot?",
+    "answer": "Jupiter"
+  },
+  {
+    "question": "What is the main ingredient in sushi?",
+    "answer": "Rice"
+  },
+  {
+    "question": "What do you call a shape with eight sides?",
+    "answer": "Octagon"
+  },
+  {
+    "question": "What is the name of Harry Potter's pet owl?",
+    "answer": "Hedwig"
+  },
+  {
+    "question": "Which country is known as the Land of the Rising Sun?",
+    "answer": "Japan"
+  },
+  {
+    "question": "What type of animal is a Komodo dragon?",
+    "answer": "Lizard"
+  },
+  {
+    "question": "What do camels store in their humps?",
+    "answer": "Fat"
+  },
+  {
+    "question": "What is the term for an animal that eats only plants?",
+    "answer": "Herbivore"
+  },
+  {
+    "question": "What is the closest star to Earth?",
+    "answer": "Sun"
+  },
+  {
+    "question": "How many legs does a crab have?",
+    "answer": "Ten"
+  },
+  {
+    "question": "Which insect has colorful wings and begins as a caterpillar?",
+    "answer": "Butterfly"
+  },
+  {
+    "question": "Which planet is blue and has strong winds?",
+    "answer": "Neptune"
+  },
+  {
+    "question": "What is the main language spoken in Canada?",
+    "answer": "English"
+  },
+  {
+    "question": "What is the name of the largest rainforest?",
+    "answer": "Amazon"
+  },
+  {
+    "question": "What do you call a baby horse?",
+    "answer": "Foal"
+  },
+  {
+    "question": "What is the boiling point of water in Celsius?",
+    "answer": "100"
+  },
+  {
+    "question": "What do penguins use to swim?",
+    "answer": "Flippers"
+  },
+  {
+    "question": "Which animal is black and white and eats bamboo?",
+    "answer": "Panda"
+  },
+  {
+    "question": "What is the fastest land animal?",
+    "answer": "Cheetah"
+  }
+]
