@@ -38,6 +38,12 @@ All games support:
 
 ---
 
+### Utilities
+- `/embedmsg` — Makes a custom embed message
+- `/edit_embed_message` — Edits the existing embed message
+
+---
+
 ### 🏆 Leaderboard System
 - Shared across all games
 - Max 10 recent winners per game
