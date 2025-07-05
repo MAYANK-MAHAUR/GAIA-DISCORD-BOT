@@ -28,7 +28,7 @@ async def on_ready():
         f'{guild.name}(id: {guild.id})')
     
     await bot.tree.sync()
-    print(f"✅ Synced slash commands as {bot.user}")
+    print(f"Bot is Working as {bot.user}")
     
 
 @bot.event
@@ -88,6 +88,8 @@ async def load_cogs():
     await bot.load_extension("cogs.Moderation.role")
     
     await bot.load_extension("Utilities.leaderboardreset_cmds")
+    await bot.load_extension("cogs.Utility.embedmsg")
+    await bot.load_extension("cogs.Utility.editembedmsg")
 
 
 
