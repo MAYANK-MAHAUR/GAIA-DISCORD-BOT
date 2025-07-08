@@ -6,7 +6,7 @@ ALLOWED_STAFF_ROLES = ["Admin", "Moderator"]
 
 class EphemeralLanguageToggle(discord.ui.View):
     def __init__(self, english_message: str, hindi_message: str, showing_english: bool):
-        super().__init__(timeout=180)
+        super().__init__(timeout=120)
         self.english_message = english_message
         self.hindi_message = hindi_message
         self.showing_english = showing_english
