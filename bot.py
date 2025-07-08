@@ -65,6 +65,12 @@ async def hello(ctx):
     await ctx.send(f"Hi {ctx.author.name}, I’m GAIA Bot!")
 
 async def load_cogs():
+    await bot.load_extension("cogs.Utility.embedmsg")
+    await bot.load_extension("cogs.Utility.editembedmsg")
+    await bot.load_extension("Utilities.leaderboardreset_cmd")
+    await bot.load_extension("cogs.Utility.send")
+    await bot.load_extension("cogs.Utility.poll")
+
     await bot.load_extension("cogs.basic")
     await bot.load_extension("cogs.games.GUESS_THE_NUMBER")
     await bot.load_extension("cogs.games.TRIVIA")
@@ -86,11 +92,6 @@ async def load_cogs():
     await bot.load_extension("cogs.Moderation.unmute")
     await bot.load_extension("cogs.Moderation.role")
     
-    await bot.load_extension("Utilities.leaderboardreset_cmd")
-    await bot.load_extension("cogs.Utility.embedmsg")
-    await bot.load_extension("cogs.Utility.editembedmsg")
-    await bot.load_extension("cogs.Utility.send")
-    await bot.load_extension("cogs.Utility.poll")
 
 
 

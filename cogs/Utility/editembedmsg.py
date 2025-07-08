@@ -2,20 +2,24 @@ import discord
 from discord.ext import commands
 from discord import app_commands, Interaction, TextChannel, AllowedMentions, Embed, Colour
 from discord.ui import Modal, TextInput, View, Button
+import datetime
+import uuid
 
 from cogs.Utility.embedmsg import (
     ALLOWED_ROLES,
     create_styled_embed,
     EphemeralLanguageToggle,
-    LanguageToggleButton
+    LanguageToggleButton,
+    EmbedComposerModal
 )
+import Data.database as database
 
 class EditPreviewButtons(discord.ui.View):
-    def __init__(self, original_interaction: Interaction, public_embed: Embed, public_view: discord.ui.View, message_to_edit: discord.Message):
+    def __init__(self, original_interaction: Interaction, embed_modal_data: dict, public_embed: Embed, message_to_edit: discord.Message):
         super().__init__(timeout=180)
         self.original_interaction = original_interaction
+        self.embed_modal_data = embed_modal_data
         self.public_embed = public_embed
-        self.public_view = public_view
         self.message_to_edit = message_to_edit
 
     async def interaction_check(self, interaction: Interaction) -> bool:
@@ -29,18 +33,82 @@ class EditPreviewButtons(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
 
         try:
+            edited_embed_data = self.embed_modal_data
+            message_id = self.message_to_edit.id
+
+            hindi_embed_for_public_view = None
+            if edited_embed_data['title_hi'] or edited_embed_data['description_hi']:
+                embed_color = EmbedComposerModal.color_map_static.get(edited_embed_data['base_color'].lower(), discord.Color.teal())
+                hindi_embed_for_public_view = create_styled_embed(
+                    title=edited_embed_data['title_hi'] if edited_embed_data['title_hi'] else edited_embed_data['title_en'],
+                    description=edited_embed_data['description_hi'] if edited_embed_data['description_hi'] else "अधिक जानकारी के लिए देखें।",
+                    color=embed_color,
+                    image_url=edited_embed_data['image_url'],
+                    thumbnail_url=edited_embed_data['thumbnail_url'],
+                    footer_text=edited_embed_data['footer_text']
+                )
+
+            new_public_view = discord.ui.View()
+
+            if hindi_embed_for_public_view:
+                final_lang_toggle_view = LanguageToggleButton(
+                    english_embed=self.public_embed,
+                    hindi_embed=hindi_embed_for_public_view,
+                    message_id=message_id
+                )
+                new_public_view.add_item(final_lang_toggle_view.children[0])
+
+            if edited_embed_data['button1_label'] and edited_embed_data['button1_url']:
+                new_public_view.add_item(discord.ui.Button(label=edited_embed_data['button1_label'], url=edited_embed_data['button1_url'], style=discord.ButtonStyle.link))
+            if edited_embed_data['button2_label'] and edited_embed_data['button2_url']:
+                new_public_view.add_item(discord.ui.Button(label=edited_embed_data['button2_label'], url=edited_embed_data['button2_url'], style=discord.ButtonStyle.link))
+
             await self.message_to_edit.edit(
                 embed=self.public_embed,
-                view=self.public_view,
+                view=new_public_view,
                 allowed_mentions=AllowedMentions.none()
             )
+
+            button1_label, button1_url = None, None
+            button2_label, button2_url = None, None
+            for item in new_public_view.children:
+                if isinstance(item, discord.ui.Button) and item.style == discord.ButtonStyle.link:
+                    if not button1_label:
+                        button1_label = item.label
+                        button1_url = item.url
+                    else:
+                        button2_label = item.label
+                        button2_url = item.url
+
+            original_db_data = await database.get_embed_data(message_id)
+            sent_by_user_id = original_db_data['sent_by_user_id'] if original_db_data else interaction.user.id
+            sent_at = original_db_data['sent_at'] if original_db_data else discord.utils.utcnow().isoformat()
+
+            await database.save_embed_data(
+                message_id=message_id,
+                channel_id=self.message_to_edit.channel.id,
+                title_en=edited_embed_data['title_en'],
+                description_en=edited_embed_data['description_en'],
+                title_hi=edited_embed_data['title_hi'],
+                description_hi=edited_embed_data['description_hi'],
+                base_color=edited_embed_data['base_color'],
+                image_url=edited_embed_data['image_url'],
+                thumbnail_url=edited_embed_data['thumbnail_url'],
+                button1_label=button1_label,
+                button1_url=button1_url,
+                button2_label=button2_label,
+                button2_url=button2_url,
+                sent_by_user_id=sent_by_user_id,
+                sent_at=sent_at
+            )
+
             await interaction.followup.send("✅ Embed successfully edited!", ephemeral=True)
             for item in self.children:
                 item.disabled = True
             await self.original_interaction.edit_original_response(content="✅ Embed successfully edited!", embed=None, view=self)
-        except Exception as e:
-            await interaction.followup.send(f"❌ An unexpected error occurred while editing: `{e}`", ephemeral=True)
-            await self.original_interaction.edit_original_response(content=f"❌ Failed to edit embed: `{e}`", embed=None, view=None)
+        except Exception:
+            await interaction.followup.send("❌ An unexpected error occurred while editing. Please try again.", ephemeral=True)
+            await self.original_interaction.edit_original_response(content="❌ Failed to edit embed.", embed=None, view=None)
 
     @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.danger, custom_id="cancel_edit_embed")
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -52,12 +120,6 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
         super().__init__(timeout=600)
         self.message_to_edit = message_to_edit
         self.initial_data = initial_data
-
-        self.color_map = {
-            "cyan": discord.Color.teal(), "blue": discord.Color.blue(),
-            "red": discord.Color.red(), "green": discord.Color.green(),
-            "purple": discord.Color.purple(), "yellow": discord.Color.gold()
-        }
 
         self.title_en = discord.ui.TextInput(
             label="Title (English)", style=discord.TextStyle.short, max_length=256, required=True,
@@ -83,12 +145,23 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
         )
         self.add_item(self.description_hi)
 
-
     async def on_submit(self, interaction: Interaction):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            embed_color = Colour(self.initial_data.get('base_color_value', discord.Color.teal().value))
+            base_color_str = self.initial_data.get('base_color', 'teal')
+            embed_color = EmbedComposerModal.color_map_static.get(base_color_str.lower(), discord.Color.teal())
+
+            sent_by_user_id = self.initial_data.get('sent_by_user_id', interaction.user.id)
+            sent_at_iso = self.initial_data.get('sent_at', discord.utils.utcnow().isoformat())
+            
+            sent_at_dt = None
+            try:
+                sent_at_dt = datetime.datetime.fromisoformat(sent_at_iso)
+            except ValueError:
+                sent_at_dt = discord.utils.utcnow()
+
+            english_footer_text = f"Sent by <@{sent_by_user_id}> | {discord.utils.format_dt(sent_at_dt, 'F')}"
 
             english_embed = create_styled_embed(
                 title=self.title_en.value,
@@ -96,36 +169,30 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
                 color=embed_color,
                 image_url=self.initial_data.get('image_url'),
                 thumbnail_url=self.initial_data.get('thumbnail_url'),
-                footer_text=self.initial_data.get('footer_text'),
+                footer_text=english_footer_text,
             )
 
-            hindi_embed = None
-            hindi_is_actually_available = False
-            if self.title_hi.value or self.description_hi.value:
-                hindi_is_actually_available = True
-                hindi_embed = create_styled_embed(
-                    title=self.title_hi.value if self.title_hi.value else self.title_en.value,
-                    description=self.description_hi.value if self.description_hi.value else "अधिक जानकारी के लिए देखें।",
-                    color=embed_color,
-                    image_url=self.initial_data.get('image_url'),
-                    thumbnail_url=self.initial_data.get('thumbnail_url'),
-                    footer_text=self.initial_data.get('footer_text'),
-                )
-
-            public_view = discord.ui.View()
-            if hindi_is_actually_available:
-                public_view.add_item(LanguageToggleButton(english_embed=english_embed, hindi_embed=hindi_embed).children[0])
-
-            if self.initial_data.get('button1_label') and self.initial_data.get('button1_url'):
-                public_view.add_item(discord.ui.Button(label=self.initial_data['button1_label'], url=self.initial_data['button1_url'], style=discord.ButtonStyle.link))
-            if self.initial_data.get('button2_label') and self.initial_data.get('button2_url'):
-                public_view.add_item(discord.ui.Button(label=self.initial_data['button2_label'], url=self.initial_data['button2_url'], style=discord.ButtonStyle.link))
-
+            updated_embed_data = {
+                'title_en': self.title_en.value,
+                'description_en': self.description_en.value,
+                'title_hi': self.title_hi.value,
+                'description_hi': self.description_hi.value,
+                'base_color': base_color_str,
+                'image_url': self.initial_data.get('image_url'),
+                'thumbnail_url': self.initial_data.get('thumbnail_url'),
+                'button1_label': self.initial_data.get('button1_label'),
+                'button1_url': self.initial_data.get('button1_url'),
+                'button2_label': self.initial_data.get('button2_label'),
+                'button2_url': self.initial_data.get('button2_url'),
+                'footer_text': english_footer_text,
+                'sent_by_user_id': sent_by_user_id,
+                'sent_at': sent_at_iso
+            }
 
             edit_preview_buttons_view = EditPreviewButtons(
                 original_interaction=interaction,
+                embed_modal_data=updated_embed_data,
                 public_embed=english_embed,
-                public_view=public_view,
                 message_to_edit=self.message_to_edit
             )
 
@@ -136,9 +203,8 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
                 ephemeral=True
             )
 
-        except Exception as e:
-            await interaction.followup.send(f"❌ An unexpected error occurred while processing your edit: `{e}`", ephemeral=True)
-
+        except Exception:
+            await interaction.followup.send("❌ An unexpected error occurred while processing your edit. Please try again.", ephemeral=True)
 
 class EmbedEditorCog(commands.Cog):
     def __init__(self, bot):
@@ -151,52 +217,47 @@ class EmbedEditorCog(commands.Cog):
     )
     @commands.has_any_role(*ALLOWED_ROLES)
     async def edit_embed(self, interaction: Interaction, message_id: str, channel: TextChannel):
-        
+        await interaction.response.defer(ephemeral=True)
+
         try:
             msg = await channel.fetch_message(int(message_id))
             if not msg.embeds:
-                await interaction.response.defer(ephemeral=True)
                 await interaction.followup.send("❌ That message has no embeds to edit.", ephemeral=True)
                 return
 
-            existing_embed = msg.embeds[0]
+            db_data = await database.get_embed_data(msg.id)
+            if not db_data:
+                await interaction.followup.send(
+                    "❌ Could not find embed data in the database. This message might not have been sent by the `/sendembed` command or its data was deleted.",
+                    ephemeral=True
+                )
+                return
 
             initial_data = {
-                "title_en": existing_embed.title or "",
-                "description_en": existing_embed.description or "",
-                "base_color_value": existing_embed.color.value,
-                "image_url": existing_embed.image.url if existing_embed.image else "",
-                "thumbnail_url": existing_embed.thumbnail.url if existing_embed.thumbnail else "",
-                "footer_text": existing_embed.footer.text if existing_embed.footer else "",
-                "title_hi": "",
-                "description_hi": "",
-                "button1_label": None,
-                "button1_url": None,
-                "button2_label": None,
-                "button2_url": None,
+                "title_en": db_data.get('title_en', ''),
+                "description_en": db_data.get('description_en', ''),
+                "title_hi": db_data.get('title_hi', ''),
+                "description_hi": db_data.get('description_hi', ''),
+                "base_color": db_data.get('base_color', 'teal'),
+                "image_url": db_data.get('image_url', ''),
+                "thumbnail_url": db_data.get('thumbnail_url', ''),
+                "button1_label": db_data.get('button1_label'),
+                "button1_url": db_data.get('button1_url'),
+                "button2_label": db_data.get('button2_label'),
+                "button2_url": db_data.get('button2_url'),
+                "sent_by_user_id": db_data.get('sent_by_user_id'),
+                "sent_at": db_data.get('sent_at')
             }
 
-            if msg.components:
-                button_count = 0
-                for component_row in msg.components:
-                    for component in component_row.children:
-                        if isinstance(component, Button) and component.style == discord.ButtonStyle.link:
-                            button_count += 1
-                            if button_count == 1:
-                                initial_data["button1_label"] = component.label
-                                initial_data["button1_url"] = component.url
-                            elif button_count == 2:
-                                initial_data["button2_label"] = component.label
-                                initial_data["button2_url"] = component.url
-
             modal = EditEmbedModal(message_to_edit=msg, initial_data=initial_data)
-            await interaction.response.send_modal(modal)
+            await interaction.followup.send_modal(modal)
 
         except discord.NotFound:
-            await interaction.response.defer(ephemeral=True)
             await interaction.followup.send("❌ Message not found. Make sure the ID and channel are correct.", ephemeral=True)
         except discord.Forbidden:
-            await interaction.response.defer(ephemeral=True)
             await interaction.followup.send("❌ I don't have permission to view that message.", ephemeral=True)
+        except Exception:
+            await interaction.followup.send("❌ An unexpected error occurred.", ephemeral=True)
+
 async def setup(bot):
     await bot.add_cog(EmbedEditorCog(bot))
