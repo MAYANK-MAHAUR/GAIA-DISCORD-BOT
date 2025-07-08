@@ -40,7 +40,7 @@ All games support:
 
 ### ⚙️ Utilities
 
-- `/send` — Sends a message as Bot
+- `/send` — Sends a message as Bot(with multilanguage support)
 - `/embedmsg` — Makes a custom embed message
 - `/edit_embed_message` — Edits the existing embed message
 
@@ -50,7 +50,7 @@ All games support:
 - Shared across all games
 - Max 10 recent winners per game
 - Auto-reset after full leaderboard
-- `/resetfinalleaderboard` & `/resetsecleaderboard` to reset     both leaderboards `/resetleaderboards`
+- `/resetleaderboards` to reset leaderboard
 
 ---
 
@@ -58,7 +58,7 @@ All games support:
 
 - **Language**: Python 3.11+
 - **Library**: [discord.py v2.5.2](https://pypi.org/project/discord.py/)
-- **Hosting**: For now used my Laptop as local server
+- **Hosting**: For now used my Laptop as local server(lol)
 - **Storage**: JSON files (for leaderboard, questions, etc.)
 - **Structure**: Fully modular Cogs (`cogs/` folder)
 
