@@ -4,8 +4,6 @@ import asyncio
 import os
 from discord.ext import commands
 from discord import app_commands
-
-
 from dotenv import load_dotenv
 load_dotenv()
 LEADERBOARD_CHANNEL_ID = int(os.getenv('LEADERBOARD_CHANNEL_ID'))
