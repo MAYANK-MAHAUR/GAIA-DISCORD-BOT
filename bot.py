@@ -45,7 +45,6 @@ async def load_cogs():
     await bot.load_extension("Utilities.leaderboardreset_cmd")
     await bot.load_extension("cogs.Utility.send")
     await bot.load_extension("cogs.Utility.poll")
-    await bot.load_extension("Utilities.rolemanagemnt")
 
     await bot.load_extension("cogs.basic")
     await bot.load_extension("cogs.games.GUESS_THE_NUMBER")
