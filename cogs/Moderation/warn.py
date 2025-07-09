@@ -5,8 +5,13 @@ import Utilities
 from discord.ext import commands
 from cogs.Moderation_Utils import SendDM, check_user_perms, log_action
 
+
+from dotenv import load_dotenv
+
+
+load_dotenv()
+LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID'))  
 WARN_FILE = "data/warnings.json"
-LOG_CHANNEL_ID = 1390372032751079454
 
 def load_warnings():
     if not os.path.exists(WARN_FILE):

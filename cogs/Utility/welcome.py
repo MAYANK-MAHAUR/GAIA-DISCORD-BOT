@@ -3,10 +3,13 @@ from discord.ext import commands
 from discord import Embed, Colour, ui
 import datetime
 import os
+from dotenv import load_dotenv
 
-WELCOME_CHANNEL_ID = 1379015236257972256
-RULES_CHANNEL_ID = 1392113043462422579
-ROLES_CHANNEL_ID = 1392113066228842527
+
+load_dotenv()
+WELCOME_CHANNEL_ID = int(os.getenv('WELCOME_CHANNEL_ID'))  
+RULES_CHANNEL_ID = int(os.getenv('RULES_CHANNEL_ID')) 
+ROLES_CHANNEL_ID = int(os.getenv('ROLES_CHANNEL_ID'))  
 
 STATIC_GAIA_BANNER_PATH = 'Data/images/gaia_background.png'
 
@@ -44,8 +47,8 @@ class WelcomeCog(commands.Cog):
             await welcome_channel.send("⚠️ Gaia banner not found.")
 
         embed = Embed(
-            description="Welcome to GAIA! We're thrilled to have you here.‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎          \n"
-                        f"Check out <#{RULES_CHANNEL_ID}> and <#{ROLES_CHANNEL_ID}> to get started.‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎     \n",
+            description="<a:welcome:1392366806940913767> Welcome to GAIA! We're thrilled to have you here <a:welcome:1392366806940913767> ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎          \n"
+                        f"<a:pinned:1392366633544323193> Check out <#{RULES_CHANNEL_ID}> and <#{ROLES_CHANNEL_ID}> to get started <a:pinned:1392366633544323193> ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎     \n",
             color=Colour.from_rgb(144, 238, 144),
             timestamp=datetime.datetime.now(datetime.timezone.utc)
         )

@@ -13,7 +13,7 @@ class Purge(commands.Cog):
         if amount < 1 or amount > 100:
             return await ctx.send("⚠️ Please provide a number between 1 and 100.")
 
-        await ctx.channel.purge(limit=amount + 1)  # +1 includes the purge command message
+        await ctx.channel.purge(limit=amount + 1)  
 
         embed = discord.Embed(
             title="🧹 Messages Purged",
