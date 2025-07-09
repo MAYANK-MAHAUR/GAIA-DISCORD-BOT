@@ -1,6 +1,10 @@
 import discord
+import os
+from dotenv import load_dotenv
 
-LOG_CHANNEL_ID = 1390372032751079454
+
+load_dotenv()
+LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID'))  
 
 async def SendDM(message, member: discord.Member):
     try:

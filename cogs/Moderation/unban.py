@@ -11,7 +11,7 @@ class Unban(commands.Cog):
     async def unban(self, ctx, *, target: str):
         banned_users = await ctx.guild.bans()
 
-        # Try to unban by user ID
+        
         if target.isdigit():
             user_id = int(target)
             for ban_entry in banned_users:
@@ -30,7 +30,7 @@ class Unban(commands.Cog):
             await ctx.send("❌ User ID not found in ban list.")
             return
 
-        # Try to unban by username (new Discord format, no discriminator)
+       
         for ban_entry in banned_users:
             if ban_entry.user.name == target:
                 await ctx.guild.unban(ban_entry.user)

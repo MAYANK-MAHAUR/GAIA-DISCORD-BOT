@@ -3,7 +3,6 @@ from discord.ext import commands
 from discord import app_commands, Interaction, TextChannel, AllowedMentions, Attachment, Webhook
 import datetime
 import uuid
-
 import Data.database as database
 from cogs.Utility.embedmsg import ALLOWED_ROLES
 

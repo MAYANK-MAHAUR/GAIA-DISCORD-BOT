@@ -1,27 +1,38 @@
 import discord
 import random
 import asyncio
+import os
 from discord.ext import commands
 from discord import app_commands
-from Utilities.Leaderboard import (
-    add_recent_winner, get_recent_winners, reset_leaderboard,
-    is_leaderboard_full, set_last_leaderboard, winners_role, giverole
-)
+
+
+from dotenv import load_dotenv
+load_dotenv()
+LEADERBOARD_CHANNEL_ID = int(os.getenv('LEADERBOARD_CHANNEL_ID'))
+PRIVATE_CHANNEL_ID = int(os.getenv('PRIVATE_CHANNEL_ID'))
 
 ALLOWED_ROLES = ["Game Master", "Moderator"]
-LEADERBOARD_CHANNEL_ID = 1379347453462970519
-PRIVATE_CHANNEL_ID = 1391437573683019866 
 
 class Guess_no(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.active_games = {}
-        self.winner_lock = asyncio.Lock()
         self.hint_tasks = {}
+        self.leaderboard_cog = None
 
-    @app_commands.command(name="startguess", description="Starts the Guess Number game")
-    @app_commands.describe(max_number="The maximum number to guess", host="Optional host name")
-    async def startguess(self, interaction: discord.Interaction, max_number: int, host: str = None):
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("Guess_no cog is ready.")
+        await self.bot.wait_until_ready()
+        self.leaderboard_cog = self.bot.get_cog('Leaderboard')
+        if self.leaderboard_cog:
+            print("Leaderboard cog found and linked to Guess_no cog.")
+        else:
+            print("WARNING: Leaderboard cog not found. Leaderboard functions will not work for Guess the Number.")
+
+    @app_commands.command(name="startguess", description="Starts the Guess the Number game")
+    @app_commands.describe(max_number="The maximum number to guess")
+    async def startguess(self, interaction: discord.Interaction, max_number: int):
         if not any(role.name in ALLOWED_ROLES for role in interaction.user.roles):
             await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
@@ -50,7 +61,7 @@ class Guess_no(commands.Cog):
             "message": game_msg,
             "max": max_number,
             "host_id": interaction.user.id,
-            "host_name": host or interaction.user.name,
+            "host_name": interaction.user.name,
             "game_name": "Guess the Number"
         }
 
@@ -107,14 +118,15 @@ class Guess_no(commands.Cog):
 
         await asyncio.sleep(90) 
         if channel_id in self.active_games:
+            game = self.active_games[channel_id]
             final_hint = discord.Embed(
                 title="⏰ Game Over",
-                description=f"No one guessed it in time. The number was `{number}`.",
+                description=f"No one guessed it in time. The number was `{game['number']}`.",
                 color=discord.Color.red()
             )
             await channel.send(embed=final_hint)
 
-            await self.active_games[channel_id]["message"].edit(content="❌ **Game Ended! No one guessed the number.**", embed=None)
+            await game["message"].edit(content="❌ **Game Ended! No one guessed the number.**", embed=None)
             del self.active_games[channel_id]
             self.hint_tasks.pop(channel_id, None)
 
@@ -144,7 +156,7 @@ class Guess_no(commands.Cog):
             return
 
         for channel_id, game in self.active_games.items():
-            if reaction.message.id == game["message"].id:
+            if reaction.message.id == game["message"].id and reaction.emoji == "🎯":
                 if user.id in game["players"]:
                     return
 
@@ -181,21 +193,24 @@ class Guess_no(commands.Cog):
             guess = int(message.content.strip())
         except ValueError:
             return 
+
         if not (1 <= guess <= game["max"]):
             return 
 
-        async with self.winner_lock:
+        if channel_id not in self.active_games:
+            return 
+
+        if guess == game["number"]:
             if channel_id not in self.active_games:
                 return 
 
-            if guess != game["number"]:
-                return 
-
-            recent_winners = get_recent_winners()
-            if any(str(w['user_id']) == str(message.author.id) for w in recent_winners):
-                await message.channel.send(f"Hey {message.author.mention}, you've recently won a game and are already on the leaderboard! Let others have a chance! 🥳", delete_after=10)
-                return
-
+            if self.leaderboard_cog:
+                if any(str(w['user_id']) == str(message.author.id) for w in self.leaderboard_cog.get_recent_winners()):
+                    await message.channel.send(f"Hey {message.author.mention}, you've recently won a game and are already on the leaderboard! Let others have a chance! 🥳", delete_after=10)
+                    return
+            else:
+                await message.channel.send("⚠️ Leaderboard system is not available for winner tracking.", delete_after=10)
+                
             await message.add_reaction("🎉")
             embed = discord.Embed(
                 title="🎊 We Have a Winner!",
@@ -204,25 +219,20 @@ class Guess_no(commands.Cog):
             )
             await message.channel.send(embed=embed)
 
-            add_recent_winner(
-                user_id=message.author.id,
-                username=message.author.name,
-                game_name=game["game_name"],
-                host_id=game["host_id"],
-                host_name=game["host_name"]
-            )
+            if self.leaderboard_cog:
+                self.leaderboard_cog.add_recent_winner(
+                    user_id=message.author.id,
+                    username=message.author.name,
+                    game_name=game["game_name"],
+                    host_id=game["host_id"],
+                    host_name=game["host_name"]
+                )
+                
+                await self.leaderboard_cog.display_leaderboard_command(message.channel)
 
-            
-            current_leaderboard_embed = await self.build_leaderboard_embed(title="🏆 Current Leaderboard")
-            try:
-                await message.channel.send(embed=current_leaderboard_embed)
-            except Exception as e:
-                print(f"Failed to send current leaderboard in game channel: {e}")
+                if self.leaderboard_cog.is_leaderboard_full():
+                    await self.handle_leaderboard_full(message.guild, message.channel, game["host_id"], game["host_name"])
 
-            if is_leaderboard_full():
-                await self.handle_leaderboard_full(message.guild, message.channel)
-
-           
             task = self.hint_tasks.pop(channel_id, None)
             if task and not task.done():
                 task.cancel() 
@@ -230,10 +240,10 @@ class Guess_no(commands.Cog):
             await game["message"].edit(content="🎯 **Game Over: We have a winner!**", embed=None)
             del self.active_games[channel_id]
 
-    async def handle_leaderboard_full(self, guild: discord.Guild, game_channel: discord.TextChannel):
-        """Handles actions when the leaderboard becomes full."""
-        leaderboard_channel = self.bot.get_channel(LEADERBOARD_CHANNEL_ID)
-        private_channel = self.bot.get_channel(PRIVATE_CHANNEL_ID)
+    async def handle_leaderboard_full(self, guild: discord.Guild, game_channel: discord.TextChannel, host_id: int, host_name: str):
+        if not self.leaderboard_cog:
+            await game_channel.send("⚠️ Leaderboard system is not available, cannot finalize game actions.")
+            return
 
         await game_channel.send(embed=discord.Embed(
             title="🎉 LEADERBOARD IS FULL! 🎉",
@@ -241,70 +251,37 @@ class Guess_no(commands.Cog):
             color=discord.Color.gold()
         ))
 
+        leaderboard_channel = self.bot.get_channel(LEADERBOARD_CHANNEL_ID)
+        private_channel = self.bot.get_channel(PRIVATE_CHANNEL_ID)
+
         if leaderboard_channel:
-            final_leaderboard_embed = await self.build_leaderboard_embed(title="🏆 Official Final Leaderboard (Guess the Number)")
-            try:
-                leaderboard_msg = await leaderboard_channel.send(embed=final_leaderboard_embed)
-                set_last_leaderboard(leaderboard_channel.id, leaderboard_msg.id)
-                await leaderboard_channel.send(
-                    "**Congratulations to all the winners!**\n"
-                    "🔄 **The leaderboard has been reset for the next set of champions!**"
-                )
-            except Exception as e:
-                print(f"Failed to send final leaderboard to dedicated channel: {e}")
-                await game_channel.send("⚠️ Could not send final leaderboard to the dedicated channel.")
+            await self.leaderboard_cog.update_leaderboard_display(leaderboard_channel)
+            await leaderboard_channel.send(
+                "**Congratulations to all the winners!**\n"
+                "🔄 **The leaderboard has been reset for the next set of champions!**"
+            )
         else:
             print(f"Error: Leaderboard channel with ID {LEADERBOARD_CHANNEL_ID} not found.")
             await game_channel.send("⚠️ Could not find the dedicated leaderboard channel for final announcement.")
 
-        
         if private_channel:
-            gm_role = discord.utils.get(guild.roles, name='Game Master')
-            mod_role = discord.utils.get(guild.roles, name='Moderator')
-            
-            
-            role_mentions = []
-            if gm_role: role_mentions.append(gm_role.mention)
-            if mod_role: role_mentions.append(mod_role.mention)
-            
-            if role_mentions:
-                await private_channel.send(f"Attention {', '.join(role_mentions)}: The **Guess the Number** leaderboard is full! Please go to {private_channel.mention} to assign a role to the winners.")
-
-                def role_prompt_check(m):
-                    return m.channel == private_channel and any(role.name in ALLOWED_ROLES for role in m.author.roles)
-
-                role_name = await winners_role(private_channel, self.bot, role_prompt_check)
-                
+            host_user = self.bot.get_user(host_id) or await self.bot.fetch_user(host_id)
+            if host_user:
+                role_name = await self.leaderboard_cog._winners_role_logic(
+                    private_channel, self.bot, lambda m: m.author == host_user and m.channel == private_channel
+                )
                 if role_name:
-                    await giverole(private_channel, role_name)
+                    await self.leaderboard_cog._giverole_logic(private_channel, role_name)
                 else:
                     await private_channel.send("⚠️ Role assignment for Guess the Number winners was skipped due to no role name provided or timeout.")
             else:
-                await private_channel.send("⚠️ No 'Game Master' or 'Moderator' roles found to notify for winner role assignment.")
-                print("Warning: 'Game Master' or 'Moderator' roles not found in guild for notification.")
+                await private_channel.send("⚠️ Host user not found for role assignment. Skipping role prompt.")
+                print(f"Warning: Host user (ID: {host_id}) not found for role assignment.")
         else:
             print(f"Error: Private channel with ID {PRIVATE_CHANNEL_ID} not found for role assignment.")
             await game_channel.send("⚠️ Could not find the private channel for role assignments.")
 
-        
-        reset_leaderboard()
-
-
-    async def build_leaderboard_embed(self, title="🏆 Current Leaderboard"):
-        recent = get_recent_winners()
-        embed = discord.Embed(title=title, color=discord.Color.gold())
-        if not recent:
-            embed.description = "No winners yet!"
-            return embed
-
-        for idx, winner in enumerate(recent, start=1):
-            timestamp = winner.get('timestamp', 'Unknown')
-            embed.add_field(
-                name=f"{idx}. @{winner['username']}",
-                value=f"`{winner['game_name']}` | Host: {winner['host_name']} | {timestamp}",
-                inline=False
-            )
-        return embed
+        self.leaderboard_cog.reset_leaderboard()
 
 async def setup(bot):
     await bot.add_cog(Guess_no(bot))
