@@ -5,6 +5,16 @@ import datetime
 import Data.database as database
 import uuid
 
+
+COLOR_MAP_STATIC = {
+    "cyan": discord.Colour.teal(), # Here's where Colour is used
+    "blue": discord.Colour.blue(),
+    "red": discord.Colour.red(),
+    "green": discord.Colour.green(),
+    "purple": discord.Colour.purple(),
+    "yellow": discord.Colour.gold()
+}
+
 ALLOWED_ROLES = ["Admin", "Moderator"]
 
 def create_styled_embed(
@@ -98,7 +108,7 @@ class LanguageToggleButton(discord.ui.View):
             )
             return
 
-        embed_color = EmbedComposerModal.color_map_static.get(embed_data['base_color'].lower(), discord.Color.teal())
+        embed_color = COLOR_MAP_STATIC.get(embed_data['base_color'].lower(), discord.Color.teal())
 
         sent_at_dt = None
         if embed_data.get('sent_at'):
@@ -147,12 +157,25 @@ class LanguageToggleButton(discord.ui.View):
         )
 
 class PreviewButtons(discord.ui.View):
-    def __init__(self, original_interaction: Interaction, public_embed: Embed, embed_modal_data: dict, target_channel: TextChannel):
+    def __init__(self, original_interaction: Interaction, public_embed: Embed, embed_modal_data: dict, target_channel: TextChannel,
+                 message_to_edit: discord.Message = None):
         super().__init__(timeout=180)
         self.original_interaction = original_interaction
         self.public_embed = public_embed
         self.embed_modal_data = embed_modal_data
         self.target_channel = target_channel
+        self.message_to_edit = message_to_edit
+
+        if self.message_to_edit:
+            self.confirm = discord.ui.Button(label="✅ Confirm & Update", style=discord.ButtonStyle.success, custom_id="confirm_update_embed")
+        else:
+            self.confirm = discord.ui.Button(label="✅ Confirm & Send", style=discord.ButtonStyle.success, custom_id="confirm_send_embed")
+        self.confirm.callback = self.confirm_callback
+        self.add_item(self.confirm)
+
+        self.cancel_button = discord.ui.Button(label="❌ Cancel", style=discord.ButtonStyle.danger, custom_id="cancel_embed")
+        self.cancel_button.callback = self.cancel_callback
+        self.add_item(self.cancel_button)
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         if interaction.user != self.original_interaction.user:
@@ -160,8 +183,7 @@ class PreviewButtons(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(label="✅ Confirm & Send", style=discord.ButtonStyle.success, custom_id="confirm_send_embed")
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm_callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
         try:
@@ -171,7 +193,7 @@ class PreviewButtons(discord.ui.View):
 
             if self.embed_modal_data['title_hi'] or self.embed_modal_data['description_hi']:
                 temp_lang_button_available = True
-                embed_color = EmbedComposerModal.color_map_static.get(self.embed_modal_data['base_color'].lower(), discord.Color.teal())
+                embed_color = COLOR_MAP_STATIC.get(self.embed_modal_data['base_color'].lower(), discord.Color.teal())
                 hindi_embed_for_public_view = create_styled_embed(
                     title=self.embed_modal_data['title_hi'] if self.embed_modal_data['title_hi'] else self.embed_modal_data['title_en'],
                     description=self.embed_modal_data['description_hi'] if self.embed_modal_data['description_hi'] else "अधिक जानकारी के लिए देखें।",
@@ -190,11 +212,19 @@ class PreviewButtons(discord.ui.View):
             if self.embed_modal_data['button2_label'] and self.embed_modal_data['button2_url']:
                 temp_public_view.add_item(discord.ui.Button(label=self.embed_modal_data['button2_label'], url=self.embed_modal_data['button2_url'], style=discord.ButtonStyle.link))
 
-            message = await self.target_channel.send(
-                embed=self.public_embed,
-                view=temp_public_view,
-                allowed_mentions=AllowedMentions.none()
-            )
+            if self.message_to_edit:
+                message = self.message_to_edit
+                await message.edit(
+                    embed=self.public_embed,
+                    view=temp_public_view,
+                    allowed_mentions=AllowedMentions.none()
+                )
+            else:
+                message = await self.target_channel.send(
+                    embed=self.public_embed,
+                    view=temp_public_view,
+                    allowed_mentions=AllowedMentions.none()
+                )
 
             final_public_view = discord.ui.View()
 
@@ -242,32 +272,49 @@ class PreviewButtons(discord.ui.View):
                 sent_at=discord.utils.utcnow().isoformat()
             )
 
-            await interaction.followup.send("✅ Embed successfully sent!", ephemeral=False)
+            feedback_message = "✅ Embed successfully sent!" if not self.message_to_edit else "✅ Embed successfully updated!"
+            # Use followup.send for a new ephemeral message
+            await interaction.followup.send(feedback_message, ephemeral=True)
+            
+            # Disable buttons on the original ephemeral preview message
             for item in self.children:
                 item.disabled = True
-            await self.original_interaction.edit_original_response(content="✅ Embed successfully sent!", embed=None, view=self)
+            try:
+                # Attempt to edit the original interaction response to disable buttons,
+                # but wrap it in a try-except to catch if it's already gone.
+                await self.original_interaction.edit_original_response(content="Action completed.", view=self)
+            except discord.NotFound:
+                pass # Silently ignore if the original ephemeral message is already gone.
+            except Exception as e:
+                print(f"Warning: Could not edit original ephemeral response (likely disappeared): {e}")
+
         except Exception as e:
             print(f"Error in confirm: {e}")
-            await interaction.followup.send(f"❌ Error while sending: `{e}`", ephemeral=True)
-            await self.original_interaction.edit_original_response(content=f"❌ Failed to send embed: `{e}`", embed=None, view=None)
+            await interaction.followup.send(f"❌ Error while sending/updating: `{e}`", ephemeral=True)
+            # Original interaction might be gone here too, but this is the primary error feedback
+            try:
+                await self.original_interaction.edit_original_response(content=f"❌ Failed to process embed: `{e}`", embed=None, view=None)
+            except discord.NotFound:
+                pass
+            except Exception as edit_err:
+                print(f"Error editing original interaction response after failure: {edit_err}")
 
-    @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.danger, custom_id="cancel_embed")
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    async def cancel_callback(self, interaction: discord.Interaction):
         await interaction.response.edit_message(content="❌ Canceled sending the embed.", embed=None, view=None)
-        await self.original_interaction.edit_original_response(content="❌ Canceled sending the embed.", embed=None, view=None)
+        # Attempt to edit the original interaction response to update its state
+        try:
+            await self.original_interaction.edit_original_response(content="❌ Canceled sending the embed.", embed=None, view=None)
+        except discord.NotFound:
+            pass # Silently ignore if the original ephemeral message is already gone.
+        except Exception as e:
+            print(f"Warning: Could not edit original ephemeral response (likely disappeared) during cancel: {e}")
+
 
 class EmbedComposerModal(discord.ui.Modal, title="Compose Embed Message"):
-    color_map_static = {
-        "cyan": discord.Color.teal(),
-        "blue": discord.Color.blue(),
-        "red": discord.Color.red(),
-        "green": discord.Color.green(),
-        "purple": discord.Color.purple(),
-        "yellow": discord.Color.gold()
-    }
-
     def __init__(self, target_channel: TextChannel, base_color: str, image_url: str = None, thumbnail_url: str = None,
-                 button1_label: str = None, button1_url: str = None, button2_label: str = None, button2_url: str = None):
+                 button1_label: str = None, button1_url: str = None, button2_label: str = None, button2_url: str = None,
+                 message_to_edit: discord.Message = None):
         super().__init__(timeout=600)
         self.target_channel = target_channel
         self.base_color_str = base_color
@@ -277,6 +324,7 @@ class EmbedComposerModal(discord.ui.Modal, title="Compose Embed Message"):
         self.button1_url = button1_url
         self.button2_label = button2_label
         self.button2_url = button2_url
+        self.message_to_edit = message_to_edit
 
         self.title_en = discord.ui.TextInput(
             label="Title (English)", style=discord.TextStyle.short, max_length=256, required=True
@@ -300,7 +348,7 @@ class EmbedComposerModal(discord.ui.Modal, title="Compose Embed Message"):
 
     async def on_submit(self, interaction: Interaction):
         await interaction.response.defer(ephemeral=True)
-        embed_color = self.color_map_static.get(self.base_color_str.lower(), discord.Color.teal())
+        embed_color = COLOR_MAP_STATIC.get(self.base_color_str.lower(), discord.Color.teal())
 
         embed_modal_data = {
             'title_en': self.title_en.value,
@@ -343,11 +391,16 @@ class EmbedComposerModal(discord.ui.Modal, title="Compose Embed Message"):
             original_interaction=interaction,
             public_embed=english_embed,
             embed_modal_data=embed_modal_data,
-            target_channel=self.target_channel
+            target_channel=self.target_channel,
+            message_to_edit=self.message_to_edit
         )
 
+        content_message = "👀 Here is a preview of your **English** embed. Click 'Confirm & Send' to post it to the channel, or 'Cancel'."
+        if self.message_to_edit:
+            content_message = "👀 Here is a preview of your **edited English** embed. Click 'Confirm & Update' to apply changes, or 'Cancel'."
+
         await interaction.followup.send(
-            content="👀 Here is a preview of your **English** embed. Click 'Confirm & Send' to post it to the channel, or 'Cancel'.",
+            content=content_message,
             embed=english_embed,
             view=preview_buttons_view,
             ephemeral=True
@@ -369,7 +422,7 @@ class EmbedMsgCog(commands.Cog):
             return
 
         for data in all_embed_data:
-            embed_color = EmbedComposerModal.color_map_static.get(data['base_color'].lower(), discord.Color.teal())
+            embed_color = COLOR_MAP_STATIC.get(data['base_color'].lower(), discord.Color.teal())
 
             sent_at_dt = None
             if data.get('sent_at'):
@@ -448,5 +501,5 @@ class EmbedMsgCog(commands.Cog):
         await interaction.response.send_modal(modal)
 
 async def setup(bot):
-    await database.initialize_db()
+    await database.init_database_module()
     await bot.add_cog(EmbedMsgCog(bot))
