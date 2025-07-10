@@ -4,13 +4,15 @@ from discord import app_commands, Interaction, TextChannel, AllowedMentions, Emb
 from discord.ui import Modal, TextInput, View, Button
 import datetime
 import uuid
+import traceback
 
 from cogs.Utility.embedmsg import (
     ALLOWED_ROLES,
     create_styled_embed,
     EphemeralLanguageToggle,
     LanguageToggleButton,
-    EmbedComposerModal
+    EmbedComposerModal,
+    COLOR_MAP_STATIC
 )
 import Data.database as database
 
@@ -37,30 +39,46 @@ class EditPreviewButtons(discord.ui.View):
             message_id = self.message_to_edit.id
 
             hindi_embed_for_public_view = None
-            if edited_embed_data['title_hi'] or edited_embed_data['description_hi']:
-                embed_color = EmbedComposerModal.color_map_static.get(edited_embed_data['base_color'].lower(), discord.Color.teal())
+            if edited_embed_data.get('title_hi') or edited_embed_data.get('description_hi'):
+                embed_color = COLOR_MAP_STATIC.get(
+                    edited_embed_data.get('base_color', 'teal').lower(), discord.Color.teal()
+                )
+                
+                original_db_data = await database.get_embed_data(message_id)
+                sent_by_user_id = original_db_data['sent_by_user_id'] if original_db_data else interaction.user.id
+                sent_at_iso = original_db_data['sent_at'] if original_db_data else discord.utils.utcnow().isoformat()
+                
+                sent_at_dt = None
+                try:
+                    sent_at_dt = datetime.datetime.fromisoformat(sent_at_iso)
+                except ValueError:
+                    sent_at_dt = discord.utils.utcnow()
+
+                hindi_footer_text = f"द्वारा प्रेषित <@{sent_by_user_id}> | {discord.utils.format_dt(sent_at_dt, 'F')}"
+
                 hindi_embed_for_public_view = create_styled_embed(
                     title=edited_embed_data['title_hi'] if edited_embed_data['title_hi'] else edited_embed_data['title_en'],
                     description=edited_embed_data['description_hi'] if edited_embed_data['description_hi'] else "अधिक जानकारी के लिए देखें।",
                     color=embed_color,
                     image_url=edited_embed_data['image_url'],
                     thumbnail_url=edited_embed_data['thumbnail_url'],
-                    footer_text=edited_embed_data['footer_text']
+                    footer_text=hindi_footer_text
                 )
 
             new_public_view = discord.ui.View()
 
             if hindi_embed_for_public_view:
-                final_lang_toggle_view = LanguageToggleButton(
+                final_lang_toggle_button_instance = LanguageToggleButton(
                     english_embed=self.public_embed,
                     hindi_embed=hindi_embed_for_public_view,
                     message_id=message_id
                 )
-                new_public_view.add_item(final_lang_toggle_view.children[0])
+                if final_lang_toggle_button_instance.children:
+                    new_public_view.add_item(final_lang_toggle_button_instance.children[0])
 
-            if edited_embed_data['button1_label'] and edited_embed_data['button1_url']:
+            if edited_embed_data.get('button1_label') and edited_embed_data.get('button1_url'):
                 new_public_view.add_item(discord.ui.Button(label=edited_embed_data['button1_label'], url=edited_embed_data['button1_url'], style=discord.ButtonStyle.link))
-            if edited_embed_data['button2_label'] and edited_embed_data['button2_url']:
+            if edited_embed_data.get('button2_label') and edited_embed_data.get('button2_url'):
                 new_public_view.add_item(discord.ui.Button(label=edited_embed_data['button2_label'], url=edited_embed_data['button2_url'], style=discord.ButtonStyle.link))
 
             await self.message_to_edit.edit(
@@ -79,6 +97,7 @@ class EditPreviewButtons(discord.ui.View):
                     else:
                         button2_label = item.label
                         button2_url = item.url
+                        break
 
             original_db_data = await database.get_embed_data(message_id)
             sent_by_user_id = original_db_data['sent_by_user_id'] if original_db_data else interaction.user.id
@@ -105,15 +124,22 @@ class EditPreviewButtons(discord.ui.View):
             await interaction.followup.send("✅ Embed successfully edited!", ephemeral=True)
             for item in self.children:
                 item.disabled = True
-            await self.original_interaction.edit_original_response(content="✅ Embed successfully edited!", embed=None, view=self)
-        except Exception:
-            await interaction.followup.send("❌ An unexpected error occurred while editing. Please try again.", ephemeral=True)
-            await self.original_interaction.edit_original_response(content="❌ Failed to edit embed.", embed=None, view=None)
+            await interaction.edit_original_response(content="Action completed.", embed=None, view=self)
+
+        except Exception as e:
+            print(f"An unexpected error occurred in EditPreviewButtons.confirm: {e}")
+            traceback.print_exc()
+            await interaction.followup.send("❌ An unexpected error occurred while editing. Please try again. Check console for details.", ephemeral=True)
+            try:
+                for item in self.children:
+                    item.disabled = True
+                await interaction.edit_original_response(content="❌ Failed to edit embed due to an unexpected error.", embed=None, view=self)
+            except Exception:
+                pass
 
     @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.danger, custom_id="cancel_edit_embed")
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(content="❌ Canceled editing the embed.", embed=None, view=None)
-        await self.original_interaction.edit_original_response(content="❌ Canceled editing the embed.", embed=None, view=None)
 
 class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
     def __init__(self, message_to_edit: discord.Message, initial_data: dict):
@@ -150,11 +176,11 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
 
         try:
             base_color_str = self.initial_data.get('base_color', 'teal')
-            embed_color = EmbedComposerModal.color_map_static.get(base_color_str.lower(), discord.Color.teal())
+            embed_color = COLOR_MAP_STATIC.get(base_color_str.lower(), discord.Color.teal())
 
             sent_by_user_id = self.initial_data.get('sent_by_user_id', interaction.user.id)
             sent_at_iso = self.initial_data.get('sent_at', discord.utils.utcnow().isoformat())
-            
+
             sent_at_dt = None
             try:
                 sent_at_dt = datetime.datetime.fromisoformat(sent_at_iso)
@@ -203,8 +229,10 @@ class EditEmbedModal(discord.ui.Modal, title="Edit Existing Embed Message"):
                 ephemeral=True
             )
 
-        except Exception:
-            await interaction.followup.send("❌ An unexpected error occurred while processing your edit. Please try again.", ephemeral=True)
+        except Exception as e:
+            print(f"An unexpected error occurred in EditEmbedModal.on_submit: {e}")
+            traceback.print_exc()
+            await interaction.followup.send("❌ An unexpected error occurred while processing your edit. Please try again. Check console for details.", ephemeral=True)
 
 class EmbedEditorCog(commands.Cog):
     def __init__(self, bot):
@@ -217,17 +245,17 @@ class EmbedEditorCog(commands.Cog):
     )
     @commands.has_any_role(*ALLOWED_ROLES)
     async def edit_embed(self, interaction: Interaction, message_id: str, channel: TextChannel):
-        await interaction.response.defer(ephemeral=True)
 
         try:
             msg = await channel.fetch_message(int(message_id))
+            
             if not msg.embeds:
-                await interaction.followup.send("❌ That message has no embeds to edit.", ephemeral=True)
+                await interaction.response.send_message("❌ That message has no embeds to edit.", ephemeral=True)
                 return
 
             db_data = await database.get_embed_data(msg.id)
             if not db_data:
-                await interaction.followup.send(
+                await interaction.response.send_message(
                     "❌ Could not find embed data in the database. This message might not have been sent by the `/sendembed` command or its data was deleted.",
                     ephemeral=True
                 )
@@ -250,14 +278,21 @@ class EmbedEditorCog(commands.Cog):
             }
 
             modal = EditEmbedModal(message_to_edit=msg, initial_data=initial_data)
-            await interaction.followup.send_modal(modal)
+            await interaction.response.send_modal(modal)
 
         except discord.NotFound:
-            await interaction.followup.send("❌ Message not found. Make sure the ID and channel are correct.", ephemeral=True)
+            await interaction.response.send_message("❌ Message not found. Make sure the ID and channel are correct.", ephemeral=True)
         except discord.Forbidden:
-            await interaction.followup.send("❌ I don't have permission to view that message.", ephemeral=True)
-        except Exception:
-            await interaction.followup.send("❌ An unexpected error occurred.", ephemeral=True)
+            await interaction.response.send_message("❌ I don't have permission to view that message.", ephemeral=True)
+        except ValueError:
+            await interaction.response.send_message("❌ Invalid Message ID. Please provide a numeric ID.", ephemeral=True)
+        except Exception as e:
+            print(f"An unexpected error occurred in edit_embed command: {e}")
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message("❌ An unexpected error occurred. Check console for details.", ephemeral=True)
+            else:
+                await interaction.followup.send("❌ An unexpected error occurred. Check console for details.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(EmbedEditorCog(bot))
