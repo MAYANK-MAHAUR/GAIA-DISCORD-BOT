@@ -35,7 +35,7 @@ class WelcomeCog(commands.Cog):
             print("❌ Welcome channel not found!")
             return
 
-        welcome_text = f"‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ <a:scribbleheartcute:1392152242995466251> Welcome {member.mention} to GAIA <a:scribbleheartcute:1392152242995466251>"
+        welcome_text = f" ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  <a:blackheart:1392364272108965888> <a:scribbleheartcute:1392152242995466251> Welcome {member.mention} to GAIA <a:scribbleheartcute:1392152242995466251> <a:blackheart:1392364272108965888>"
         await welcome_channel.send(welcome_text)
 
         if os.path.exists(STATIC_GAIA_BANNER_PATH):
@@ -47,7 +47,7 @@ class WelcomeCog(commands.Cog):
             await welcome_channel.send("⚠️ Gaia banner not found.")
 
         embed = Embed(
-            description="<a:welcome:1392366806940913767> Welcome to GAIA! We're thrilled to have you here <a:welcome:1392366806940913767> ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎          \n"
+            description="<a:welcome:1392366806940913767> Welcome to GAIA! We're thrilled to have you here <a:welcome:1392366806940913767>‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎  ‎   "
                         f"<a:pinned:1392366633544323193> Check out <#{RULES_CHANNEL_ID}> and <#{ROLES_CHANNEL_ID}> to get started <a:pinned:1392366633544323193> ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎     \n",
             color=Colour.from_rgb(144, 238, 144),
             timestamp=datetime.datetime.now(datetime.timezone.utc)
