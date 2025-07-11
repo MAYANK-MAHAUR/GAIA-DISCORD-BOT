@@ -7,7 +7,7 @@ import uuid
 
 
 COLOR_MAP_STATIC = {
-    "cyan": discord.Colour.teal(), # Here's where Colour is used
+    "cyan": discord.Colour.teal(), 
     "blue": discord.Colour.blue(),
     "red": discord.Colour.red(),
     "green": discord.Colour.green(),
@@ -273,25 +273,21 @@ class PreviewButtons(discord.ui.View):
             )
 
             feedback_message = "✅ Embed successfully sent!" if not self.message_to_edit else "✅ Embed successfully updated!"
-            # Use followup.send for a new ephemeral message
             await interaction.followup.send(feedback_message, ephemeral=True)
             
-            # Disable buttons on the original ephemeral preview message
+         
             for item in self.children:
                 item.disabled = True
             try:
-                # Attempt to edit the original interaction response to disable buttons,
-                # but wrap it in a try-except to catch if it's already gone.
                 await self.original_interaction.edit_original_response(content="Action completed.", view=self)
             except discord.NotFound:
-                pass # Silently ignore if the original ephemeral message is already gone.
+                pass 
             except Exception as e:
                 print(f"Warning: Could not edit original ephemeral response (likely disappeared): {e}")
 
         except Exception as e:
             print(f"Error in confirm: {e}")
             await interaction.followup.send(f"❌ Error while sending/updating: `{e}`", ephemeral=True)
-            # Original interaction might be gone here too, but this is the primary error feedback
             try:
                 await self.original_interaction.edit_original_response(content=f"❌ Failed to process embed: `{e}`", embed=None, view=None)
             except discord.NotFound:
@@ -302,11 +298,10 @@ class PreviewButtons(discord.ui.View):
 
     async def cancel_callback(self, interaction: discord.Interaction):
         await interaction.response.edit_message(content="❌ Canceled sending the embed.", embed=None, view=None)
-        # Attempt to edit the original interaction response to update its state
         try:
             await self.original_interaction.edit_original_response(content="❌ Canceled sending the embed.", embed=None, view=None)
         except discord.NotFound:
-            pass # Silently ignore if the original ephemeral message is already gone.
+            pass 
         except Exception as e:
             print(f"Warning: Could not edit original ephemeral response (likely disappeared) during cancel: {e}")
 
