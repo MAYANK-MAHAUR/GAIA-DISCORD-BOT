@@ -7,14 +7,13 @@ from discord.ext import commands
 from openai import OpenAI
 from dotenv import load_dotenv
 
+load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 GAIANET_API_KEY = os.getenv("GAIANET_API_KEY")
 GAIANET_BASE_URL = os.getenv("GAIANET_BASE_URL")
 GAIANET_MODEL_NAME = os.getenv("GAIANET_MODEL_NAME") 
 
-
-load_dotenv()
 gaia_client = OpenAI(
     base_url=GAIANET_BASE_URL,
     api_key=GAIANET_API_KEY
