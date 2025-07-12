@@ -12,7 +12,7 @@
 - `!mute` & `!unmute` — Temporarily silence a member
 - `!warn` — Warn users (3 warnings = auto-ban)
 - `!unban` — Unban by user ID
-- `!lockchannel` & `!unlockchannel` — Lock/unlock chat
+- `!lock` & `!unlock` — Lock/unlock chat
 - `!nickname` — Change a user’s nickname
 - `!slowmode` — Add message cooldowns
 - `!purge` — Bulk delete messages
@@ -52,6 +52,15 @@ All games support:
 - Auto-reset after full leaderboard
 - `/resetleaderboards` to reset leaderboard
 
+---
+
+### 🤖 AI POWERED ANSWERS
+- Gaia Bot now uses the LLaMA model via GaiaNet to deliver intelligent, real-time responses.
+- Just mention or reply to the bot with your question, and it will answer instantly!
+- Example:
+  `@GAIA What is the best decentralized network project?
+  Answer: GAIA 🌐`
+  
 ---
 
 ## 🚀 Tech Stack
