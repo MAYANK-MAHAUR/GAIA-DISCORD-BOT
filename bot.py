@@ -108,10 +108,9 @@ async def ask_gaia_command(ctx, *, question: str = None):
     if question is None:
         await ctx.send(botresponses.GAIANET_NO_QUESTION_COMMAND)
         return
-    await ctx.send(botresponses.GAIANET_LOADING)
 
     ai_response = await get_gaia_ai_response(question)
-    await ctx.send(f"**GaiaNet AI says:** {ai_response}")
+    await ctx.send(f"{ai_response}")
 
 @bot.command(name='hello', help='Says hello to the user.')
 async def hello_command(ctx):
