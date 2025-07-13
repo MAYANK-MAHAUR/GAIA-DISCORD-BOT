@@ -5,6 +5,7 @@ import botresponses
 import random
 import sqlite3
 import json
+import numpy as np
 from discord.ext import commands
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -13,11 +14,22 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 GAIANET_API_KEY = os.getenv("GAIANET_API_KEY")
+
 GAIANET_BASE_URL = os.getenv("GAIANET_BASE_URL")
 GAIANET_MODEL_NAME = os.getenv("GAIANET_MODEL_NAME") 
 
+GAIANET_EMBEDDING_BASE_URL = os.getenv("GAIANET_EMBEDDING_BASE_URL", "https://qwen7b.gaia.domains/v1")
+GAIANET_EMBEDDING_MODEL = os.getenv("GAIANET_EMBEDDING_MODEL", "nomic-embed-text-v1.5.f16")
+
+SIMILARITY_THRESHOLD = 0.75
+
 gaia_client = OpenAI(
     base_url=GAIANET_BASE_URL,
+    api_key=GAIANET_API_KEY
+)
+
+gaia_embedding_client = OpenAI(
+    base_url=GAIANET_EMBEDDING_BASE_URL,
     api_key=GAIANET_API_KEY
 )
 
@@ -42,6 +54,14 @@ def init_db():
         CREATE TABLE IF NOT EXISTS chat_histories (
             conversation_id TEXT PRIMARY KEY,
             history TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS permanent_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL UNIQUE,
+            answer TEXT NOT NULL,
+            embedding TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -75,7 +95,84 @@ def clear_chat_history_db(conversation_id):
     conn.commit()
     conn.close()
 
+async def get_embedding(text: str) -> list[float]:
+    try:
+        response = await asyncio.to_thread(
+            gaia_embedding_client.embeddings.create,
+            model=GAIANET_EMBEDDING_MODEL,
+            input=[text]
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"Error getting embedding from GaiaNet API: {e}")
+        raise
+
+def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
+    vec1_np = np.array(vec1)
+    vec2_np = np.array(vec2)
+    
+    dot_product = np.dot(vec1_np, vec2_np)
+    norm_vec1 = np.linalg.norm(vec1_np)
+    norm_vec2 = np.linalg.norm(vec2_np)
+    
+    if norm_vec1 == 0 or norm_vec2 == 0:
+        return 0.0
+    
+    return dot_product / (norm_vec1 * norm_vec2)
+
+async def add_permanent_memory(keyword, answer):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        embedding = await get_embedding(keyword)
+        embedding_json = json.dumps(embedding)
+
+        cursor.execute(
+            'INSERT INTO permanent_memory (keyword, answer, embedding) VALUES (?, ?, ?)',
+            (keyword.lower(), answer, embedding_json)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    except Exception as e:
+        print(f"Error adding permanent memory: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_permanent_memories():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, keyword, answer, embedding FROM permanent_memory ORDER BY id')
+    results = cursor.fetchall()
+    conn.close()
+    return [(r[0], r[1], r[2], json.loads(r[3])) for r in results]
+
+def delete_permanent_memory(memory_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM permanent_memory WHERE id = ?', (memory_id,))
+    conn.commit()
+    rows_affected = cursor.rowcount
+    conn.close()
+    return rows_affected > 0
+
 async def get_gaia_ai_response(prompt_text, conversation_id):
+    try:
+        user_embedding = await get_embedding(prompt_text)
+        permanent_memories = get_permanent_memories()
+
+        for mem_id, keyword, answer, stored_embedding in permanent_memories:
+            similarity = calculate_cosine_similarity(user_embedding, stored_embedding)
+            if similarity >= SIMILARITY_THRESHOLD:
+                print(f"Semantic match found for '{prompt_text}' with keyword '{keyword}' (Similarity: {similarity:.2f})")
+                return answer
+
+    except Exception as e:
+        print(f"Error during permanent memory semantic search: {e}")
+        pass
+
     if not GAIANET_API_KEY:
         print("Error: GaiaNet API key is not configured in .env.")
         return botresponses.ERROR_GENERIC 
@@ -149,7 +246,7 @@ async def on_message(message: discord.Message):
                 question_content = question_content[len(bot.command_prefix + 'askgaia'):].strip()
 
             if not question_content:
-                await message.reply()
+                await message.reply(botresponses.GAIANET_NO_QUESTION_MENTION_REPLY)
                 return 
 
             ai_response = await get_gaia_ai_response(question_content, conversation_id)
@@ -173,6 +270,48 @@ async def clear_history(ctx):
     clear_chat_history_db(conversation_id)
     await ctx.send("My conversation memory for this channel has been cleared!")
 
+@bot.command(name='remember', help='Adds a fact to the bot\'s permanent memory. Usage: !remember <keyword> | <answer>')
+async def remember_command(ctx, *, args: str):
+    parts = args.split('|', 1)
+    if len(parts) != 2:
+        await ctx.send("Invalid format. Use: `!remember <keyword> | <answer>`")
+        return
+    
+    keyword = parts[0].strip()
+    answer = parts[1].strip()
+
+    if not keyword or not answer:
+        await ctx.send("Keyword and answer cannot be empty.")
+        return
+
+    if await add_permanent_memory(keyword, answer):
+        await ctx.send(botresponses.MEMORY_ADD_SUCCESS.format(keyword=keyword, answer=answer))
+    else:
+        await ctx.send(botresponses.MEMORY_ADD_DUPLICATE.format(keyword=keyword))
+
+@bot.command(name='list memories', help='Lists all facts the bot remembers permanently.')
+async def list_memories_command(ctx):
+    memories = get_permanent_memories()
+    if not memories:
+        await ctx.send(botresponses.MEMORY_LIST_EMPTY)
+        return
+
+    memory_list = "Here are my permanent memories:\n"
+    for mem_id, keyword, answer, _ in memories:
+        memory_list += f"**ID:** `{mem_id}` | **Keyword:** `{keyword}` | **Answer:** {answer}\n"
+    
+    if len(memory_list) > 2000:
+        await ctx.send(botresponses.MEMORY_LIST_TOO_LONG)
+    else:
+        await ctx.send(memory_list)
+
+@bot.command(name='forget memory', help='Removes a fact from the bot\'s permanent memory by its ID. Usage: !forget memory <ID>')
+async def forget_memory_command(ctx, memory_id: int):
+    if delete_permanent_memory(memory_id):
+        await ctx.send(botresponses.MEMORY_FORGET_SUCCESS.format(memory_id=memory_id))
+    else:
+        await ctx.send(botresponses.MEMORY_FORGET_NOT_FOUND.format(memory_id=memory_id))
+
 @bot.command(name='hello', help='Says hello to the user.')
 async def hello_command(ctx):
     await ctx.send(botresponses.HELLO_MESSAGE)
@@ -187,6 +326,8 @@ async def coinflip_command(ctx):
         await ctx.send(botresponses.FLIP_COIN_HEADS)
     else:
         await ctx.send(botresponses.FLIP_COIN_TAILS)
+
+        
 
 async def load_cogs():
     await bot.load_extension("cogs.Utility.embedmsg")
