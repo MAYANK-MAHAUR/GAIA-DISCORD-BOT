@@ -4,7 +4,7 @@
 
 ---
 
-## 🔧 Features
+## 🔧 Features(Version - 1.0.0)
 
 ### 🛡️ Moderation
 - `!kick` — Kick a member from the server
