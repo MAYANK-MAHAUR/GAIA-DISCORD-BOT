@@ -44,13 +44,6 @@ def init_db():
             history TEXT
         )
     ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS permanent_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            keyword TEXT NOT NULL UNIQUE,
-            answer TEXT NOT NULL
-        )
-    ''')
     conn.commit()
     conn.close()
 
@@ -82,45 +75,7 @@ def clear_chat_history_db(conversation_id):
     conn.commit()
     conn.close()
 
-def add_permanent_memory(keyword, answer):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            'INSERT INTO permanent_memory (keyword, answer) VALUES (?, ?)',
-            (keyword.lower(), answer) 
-        )
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError: 
-        return False
-    finally:
-        conn.close()
-
-def get_permanent_memories():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, keyword, answer FROM permanent_memory ORDER BY id')
-    results = cursor.fetchall()
-    conn.close()
-    return results
-
-def delete_permanent_memory(memory_id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM permanent_memory WHERE id = ?', (memory_id,))
-    conn.commit()
-    rows_affected = cursor.rowcount
-    conn.close()
-    return rows_affected > 0
-
 async def get_gaia_ai_response(prompt_text, conversation_id):
-    permanent_memories = get_permanent_memories()
-    for mem_id, keyword, answer in permanent_memories:
-        if keyword.lower() in prompt_text.lower():
-            return answer 
-
-  
     if not GAIANET_API_KEY:
         print("Error: GaiaNet API key is not configured in .env.")
         return botresponses.ERROR_GENERIC 
@@ -128,7 +83,7 @@ async def get_gaia_ai_response(prompt_text, conversation_id):
     try:
         chat_history = get_chat_history(conversation_id)
 
-        system_message = {"role": "system", "content": "You are a helpful AI assistant on Discord, powered by GaiaNet. Provide concise and direct answers in short."}
+        system_message = {"role": "system", "content": "You are a helpful AI assistant on Discord, powered by GaiaNet. Provide concise and direct answers."}
 
         user_message = {"role": "user", "content": prompt_text}
         chat_history.append(user_message)
@@ -194,6 +149,7 @@ async def on_message(message: discord.Message):
                 question_content = question_content[len(bot.command_prefix + 'askgaia'):].strip()
 
             if not question_content:
+                await message.reply()
                 return 
 
             ai_response = await get_gaia_ai_response(question_content, conversation_id)
@@ -217,49 +173,6 @@ async def clear_history(ctx):
     clear_chat_history_db(conversation_id)
     await ctx.send("My conversation memory for this channel has been cleared!")
 
-@bot.command(name='remember', help='Adds a fact to the bot\'s permanent memory. Usage: !remember <keyword> | <answer>')
-async def remember_command(ctx, *, args: str):
-    parts = args.split('|', 1)
-    if len(parts) != 2:
-        await ctx.send("Invalid format. Use: `!remember <keyword> | <answer>`")
-        return
-    
-    keyword = parts[0].strip()
-    answer = parts[1].strip()
-
-    if not keyword or not answer:
-        await ctx.send("Keyword and answer cannot be empty.")
-        return
-
-    if add_permanent_memory(keyword, answer):
-        await ctx.send(f"I will remember that '{keyword}' means: {answer}")
-    else:
-        await ctx.send(f"I already have a memory for '{keyword}'. Please use a different keyword or !forget memory first.")
-
-@bot.command(name='list memories', help='Lists all facts the bot remembers permanently.')
-async def list_memories_command(ctx):
-    memories = get_permanent_memories()
-    if not memories:
-        await ctx.send("I don't have any permanent memories yet.")
-        return
-
-    memory_list = "Here are my permanent memories:\n"
-    for mem_id, keyword, answer in memories:
-        memory_list += f"**ID:** `{mem_id}` | **Keyword:** `{keyword}` | **Answer:** {answer}\n"
-    
-    
-    if len(memory_list) > 2000:
-        await ctx.send("My memories are too Long to list here.")
-    else:
-        await ctx.send(memory_list)
-
-@bot.command(name='forget memory', help='Removes a fact from the bot\'s permanent memory by its ID. Usage: !forget_memory <ID>')
-async def forget_memory_command(ctx, memory_id: int):
-    if delete_permanent_memory(memory_id):
-        await ctx.send(f"Memory with ID `{memory_id}` has been forgotten.")
-    else:
-        await ctx.send(f"No memory found with ID `{memory_id}`.")
-
 @bot.command(name='hello', help='Says hello to the user.')
 async def hello_command(ctx):
     await ctx.send(botresponses.HELLO_MESSAGE)
@@ -274,7 +187,6 @@ async def coinflip_command(ctx):
         await ctx.send(botresponses.FLIP_COIN_HEADS)
     else:
         await ctx.send(botresponses.FLIP_COIN_TAILS)
-
 
 async def load_cogs():
     await bot.load_extension("cogs.Utility.embedmsg")
