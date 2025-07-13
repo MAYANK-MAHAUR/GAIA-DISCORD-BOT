@@ -18,7 +18,7 @@ FLIP_COIN_TAILS = "It's **Tails**! 🪙"
 
 
 MEMORY_ADD_SUCCESS = "I will remember that '{keyword}' means: {answer}"
-MEMORY_ADD_DUPLICATE = "I already have a memory for '{keyword}'. Please use a different keyword or !forget_memory first."
+MEMORY_ADD_DUPLICATE = "I already have a memory for '{keyword}'. Please use a different keyword or !forget memory first."
 MEMORY_FORGET_SUCCESS = "Memory with ID `{memory_id}` has been forgotten."
 MEMORY_FORGET_NOT_FOUND = "No memory found with ID `{memory_id}`."
 MEMORY_LIST_EMPTY = "I don't have any permanent memories yet."

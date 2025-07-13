@@ -16,10 +16,10 @@ GUILD = os.getenv('DISCORD_GUILD')
 GAIANET_API_KEY = os.getenv("GAIANET_API_KEY")
 
 GAIANET_BASE_URL = os.getenv("GAIANET_BASE_URL")
-GAIANET_MODEL_NAME = os.getenv("GAIANET_MODEL_NAME") 
+GAIANET_MODEL_NAME = os.getenv("GAIANET_MODEL_NAME")
 
 GAIANET_EMBEDDING_BASE_URL = os.getenv("GAIANET_EMBEDDING_BASE_URL", "https://qwen7b.gaia.domains/v1")
-GAIANET_EMBEDDING_MODEL = os.getenv("GAIANET_EMBEDDING_MODEL", "nomic-embed-text-v1.5.f16")
+GAIANET_EMBEDDING_MODEL = os.getenv("GAIANET_EMBEDDING_EMBEDDING_MODEL", "nomic-embed-text-v1.5.f16")
 
 SIMILARITY_THRESHOLD = 0.75
 
@@ -35,9 +35,9 @@ gaia_embedding_client = OpenAI(
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True 
-intents.dm_messages = True 
-intents.presences = True 
+intents.members = True
+intents.dm_messages = True
+intents.presences = True
 intents.guilds = True
 intents.message_content = True
 intents.guild_messages = True
@@ -46,6 +46,8 @@ bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 
 DB_NAME = 'bot_memory.db'
 MAX_HISTORY_MESSAGES = 20
+
+ALLOWED_ROLES = ["Admin", "Moderator"]
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -110,14 +112,14 @@ async def get_embedding(text: str) -> list[float]:
 def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     vec1_np = np.array(vec1)
     vec2_np = np.array(vec2)
-    
+
     dot_product = np.dot(vec1_np, vec2_np)
     norm_vec1 = np.linalg.norm(vec1_np)
     norm_vec2 = np.linalg.norm(vec2_np)
-    
+
     if norm_vec1 == 0 or norm_vec2 == 0:
         return 0.0
-    
+
     return dot_product / (norm_vec1 * norm_vec2)
 
 async def add_permanent_memory(keyword, answer):
@@ -175,7 +177,7 @@ async def get_gaia_ai_response(prompt_text, conversation_id):
 
     if not GAIANET_API_KEY:
         print("Error: GaiaNet API key is not configured in .env.")
-        return botresponses.ERROR_GENERIC 
+        return botresponses.ERROR_GENERIC
 
     try:
         chat_history = get_chat_history(conversation_id)
@@ -188,12 +190,12 @@ async def get_gaia_ai_response(prompt_text, conversation_id):
         messages_for_api = [system_message] + chat_history[-(MAX_HISTORY_MESSAGES - 1):]
 
         response = gaia_client.chat.completions.create(
-            model=GAIANET_MODEL_NAME, 
+            model=GAIANET_MODEL_NAME,
             messages=messages_for_api,
-            temperature=0.7, 
+            temperature=0.7,
             max_tokens=500
         )
-    
+
         ai_response_content = response.choices[0].message.content
 
         ai_message = {"role": "assistant", "content": ai_response_content}
@@ -212,9 +214,8 @@ async def on_ready():
     print(
         f'{bot.user} is connected to the following guild:\n'
         f'{guild.name}(id: {guild.id})')
-    
+
     init_db()
-    await bot.tree.sync()
     print(f"Bot is Working as {bot.user}")
     print(botresponses.HELLO_MESSAGE)
 
@@ -228,9 +229,9 @@ async def on_message(message: discord.Message):
     bot_mentioned = bot.user.mentioned_in(message)
 
     is_reply_to_bot = (
-        message.reference 
-        and message.reference.resolved 
-        and message.reference.resolved.author == bot.user 
+        message.reference
+        and message.reference.resolved
+        and message.reference.resolved.author == bot.user
     )
 
     question_content = message.content.strip()
@@ -241,17 +242,17 @@ async def on_message(message: discord.Message):
                 mention_string = f"<@{bot.user.id}>"
                 mention_string_nickname = f"<@!{bot.user.id}>"
                 question_content = question_content.replace(mention_string, "").replace(mention_string_nickname, "").strip()
-            
+
             if question_content.startswith(bot.command_prefix + 'askgaia'):
                 question_content = question_content[len(bot.command_prefix + 'askgaia'):].strip()
 
             if not question_content:
                 await message.reply(botresponses.GAIANET_NO_QUESTION_MENTION_REPLY)
-                return 
+                return
 
             ai_response = await get_gaia_ai_response(question_content, conversation_id)
             await message.reply(ai_response)
-            return 
+            return
     await bot.process_commands(message)
 
 @bot.command(name='askgaia', help=botresponses.GAIANET_NO_QUESTION_COMMAND)
@@ -264,19 +265,21 @@ async def ask_gaia_command(ctx, *, question: str = None):
     ai_response = await get_gaia_ai_response(question, conversation_id)
     await ctx.send(f"{ai_response}")
 
-@bot.command(name='clear history', help='Clears the bot\'s conversation memory for this channel.')
+@bot.command(name='clearhistory', help='Clears the bot\'s conversation memory for this channel.')
+@commands.has_any_role(*ALLOWED_ROLES)
 async def clear_history(ctx):
     conversation_id = str(ctx.channel.id)
     clear_chat_history_db(conversation_id)
     await ctx.send("My conversation memory for this channel has been cleared!")
 
 @bot.command(name='remember', help='Adds a fact to the bot\'s permanent memory. Usage: !remember <keyword> | <answer>')
+@commands.has_any_role(*ALLOWED_ROLES)
 async def remember_command(ctx, *, args: str):
     parts = args.split('|', 1)
     if len(parts) != 2:
         await ctx.send("Invalid format. Use: `!remember <keyword> | <answer>`")
         return
-    
+
     keyword = parts[0].strip()
     answer = parts[1].strip()
 
@@ -289,7 +292,8 @@ async def remember_command(ctx, *, args: str):
     else:
         await ctx.send(botresponses.MEMORY_ADD_DUPLICATE.format(keyword=keyword))
 
-@bot.command(name='list memories', help='Lists all facts the bot remembers permanently.')
+@bot.command(name='listmemories', help='Lists all facts the bot remembers permanently.')
+@commands.has_any_role(*ALLOWED_ROLES)
 async def list_memories_command(ctx):
     memories = get_permanent_memories()
     if not memories:
@@ -299,13 +303,14 @@ async def list_memories_command(ctx):
     memory_list = "Here are my permanent memories:\n"
     for mem_id, keyword, answer, _ in memories:
         memory_list += f"**ID:** `{mem_id}` | **Keyword:** `{keyword}` | **Answer:** {answer}\n"
-    
+
     if len(memory_list) > 2000:
         await ctx.send(botresponses.MEMORY_LIST_TOO_LONG)
     else:
         await ctx.send(memory_list)
 
-@bot.command(name='forget memory', help='Removes a fact from the bot\'s permanent memory by its ID. Usage: !forget memory <ID>')
+@bot.command(name='forgetmemory', help='Removes a fact from the bot\'s permanent memory by its ID. Usage: !forgetmemory <ID>')
+@commands.has_any_role(*ALLOWED_ROLES)
 async def forget_memory_command(ctx, memory_id: int):
     if delete_permanent_memory(memory_id):
         await ctx.send(botresponses.MEMORY_FORGET_SUCCESS.format(memory_id=memory_id))
@@ -327,7 +332,16 @@ async def coinflip_command(ctx):
     else:
         await ctx.send(botresponses.FLIP_COIN_TAILS)
 
-        
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingAnyRole):
+        await ctx.send(f"❌ You don't have the necessary roles to use this command. You need one of: {', '.join(ALLOWED_ROLES)}.", ephemeral=True)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"Missing arguments. Please check the command usage. Example: `{ctx.command.help}`")
+    else:
+        print(f"An error occurred: {error}")
+    raise error
 
 async def load_cogs():
     await bot.load_extension("cogs.Utility.embedmsg")
@@ -345,7 +359,7 @@ async def load_cogs():
     await bot.load_extension("cogs.games.scramble_words")
     await bot.load_extension("cogs.games.Lyrics_Guess")
     await bot.load_extension("cogs.games.emoji_guess")
-    
+
     await bot.load_extension("cogs.Moderation.ban")
     await bot.load_extension("cogs.Moderation.kick")
     await bot.load_extension("cogs.Moderation.unban")
@@ -358,7 +372,7 @@ async def load_cogs():
     await bot.load_extension("cogs.Moderation.slowmode")
     await bot.load_extension("cogs.Moderation.unmute")
     await bot.load_extension("cogs.Moderation.role")
-    
+
 async def main():
     await load_cogs()
     await bot.start(TOKEN)
