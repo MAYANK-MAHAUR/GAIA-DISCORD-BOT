@@ -55,7 +55,7 @@ All games support:
 ---
 
 ### 🤖 AI POWERED ANSWERS
-- Gaia Bot now uses the LLaMA model via GaiaNet to deliver intelligent, real-time responses.
+- Gaia Bot now uses the Qwen model via GaiaNet to deliver intelligent, real-time responses.
 - Just mention or reply to the bot with your question, and it will answer instantly!
 - Example:
   `@GAIA What is the best decentralized network project?
