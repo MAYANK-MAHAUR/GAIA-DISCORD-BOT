@@ -5,9 +5,61 @@ import os
 DATABASE_FILE = 'bot_data.db'
 LAST_CLEAR_FILE = 'last_clear_date.txt'
 
+
 async def connect_db():
     return await aiosqlite.connect(DATABASE_FILE)
 
+
+
+async def initialize_points_db():
+    """Initializes the user_points table."""
+    conn = await aiosqlite.connect(DATABASE_FILE)
+    cursor = await conn.cursor()
+    await cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_points (
+            user_id INTEGER PRIMARY KEY,
+            total_points INTEGER DEFAULT 0
+        )
+    ''')
+    await conn.commit()
+    await conn.close()
+
+async def get_user_points(user_id: int):
+    """Retrieves a user's total points."""
+    result = await fetch_one('SELECT total_points FROM user_points WHERE user_id = ?', (user_id,))
+    return result[0] if result else 0
+
+async def add_points_to_user(user_id: int, points: int):
+    """Adds points to a user, creating their entry if it doesn't exist."""
+    await execute_query(
+        'INSERT OR IGNORE INTO user_points (user_id, total_points) VALUES (?, 0)',
+        (user_id,)
+    )
+    await execute_query(
+        'UPDATE user_points SET total_points = total_points + ? WHERE user_id = ?',
+        (points, user_id)
+    )
+
+async def get_top_players(limit: int = 10):
+    """Fetches the top players from the user_points table."""
+    return await fetch_all('SELECT user_id, total_points FROM user_points ORDER BY total_points DESC LIMIT ?', (limit,))
+
+async def execute_query(query: str, params: tuple = ()):
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        await db.execute(query, params)
+        await db.commit()
+
+async def fetch_one(query: str, params: tuple = ()):
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        async with db.execute(query, params) as cursor:
+            return await cursor.fetchone()
+
+async def fetch_all(query: str, params: tuple = ()):
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        async with db.execute(query, params) as cursor:
+            return await cursor.fetchall()
+
+# --- MULTI EMBEDS TABLE ---
 async def initialize_db():
     conn = await connect_db()
     cursor = await conn.cursor()
@@ -97,6 +149,7 @@ async def delete_embed_data(message_id: int):
     await conn.commit()
     await conn.close()
 
+
 async def initialize_text_message_db():
     conn = await connect_db()
     cursor = await conn.cursor()
@@ -182,12 +235,13 @@ async def check_and_clear_db_monthly():
         if os.path.exists(DATABASE_FILE):
             os.remove(DATABASE_FILE)
             print(f"Database file '{DATABASE_FILE}' deleted.")
-        
+
         with open(LAST_CLEAR_FILE, 'w') as f:
             f.write(current_month_year)
         print(f"Last clear date updated to {current_month_year}.")
     else:
         print(f"Database not cleared. Still in month: {current_month_year}.")
+
 
 async def init_database_module():
     await check_and_clear_db_monthly()
@@ -200,4 +254,4 @@ if __name__ == '__main__':
         print("Running standalone database initialization test...")
         await init_database_module()
         print("Standalone database initialization test complete.")
-    asyncio.run(run_test_init()) 
+    asyncio.run(run_test_init())

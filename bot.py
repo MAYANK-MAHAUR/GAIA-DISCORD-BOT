@@ -211,6 +211,7 @@ async def get_gaia_ai_response(prompt_text, conversation_id):
 @bot.event
 async def on_ready():
     guild = discord.utils.get(bot.guilds, name=GUILD)
+    await bot.tree.sync()
     print(
         f'{bot.user} is connected to the following guild:\n'
         f'{guild.name}(id: {guild.id})')
@@ -351,6 +352,7 @@ async def load_cogs():
     await bot.load_extension("Utilities.leaderboardreset_cmd")
     await bot.load_extension("cogs.Utility.send")
     await bot.load_extension("cogs.Utility.poll")
+    await bot.load_extension("Utilities.Points_Leaderboard")
 
     await bot.load_extension("cogs.basic")
     await bot.load_extension("cogs.games.GUESS_THE_NUMBER")
@@ -359,6 +361,7 @@ async def load_cogs():
     await bot.load_extension("cogs.games.scramble_words")
     await bot.load_extension("cogs.games.Lyrics_Guess")
     await bot.load_extension("cogs.games.emoji_guess")
+    await bot.load_extension("cogs.games.W_Y_R")
 
     await bot.load_extension("cogs.Moderation.ban")
     await bot.load_extension("cogs.Moderation.kick")
