@@ -7,7 +7,7 @@ import Utilities
 import os
 import json
 
-from Utilities.gaianet_utils import get_gaia_ai_response, get_embedding, calculate_cosine_similarity 
+from Utilities.wyr_utils import get_gaia_ai_response, get_embedding, calculate_cosine_similarity 
 from Data.wyr_questions import WYR_QUESTIONS
 
 WINNING_PROMPT_TEMPLATE = (
