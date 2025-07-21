@@ -216,7 +216,6 @@ async def on_ready():
         f'{bot.user} is connected to the following guild:\n'
         f'{guild.name}(id: {guild.id})')
 
-    init_db()
     print(f"Bot is Working as {bot.user}")
     print(botresponses.HELLO_MESSAGE)
 
@@ -382,4 +381,5 @@ async def main():
     await bot.start(TOKEN)
 
 if __name__ == "__main__":
+    init_db()
     asyncio.run(main())
