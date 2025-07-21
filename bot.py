@@ -362,6 +362,7 @@ async def load_cogs():
     await bot.load_extension("cogs.games.Lyrics_Guess")
     await bot.load_extension("cogs.games.emoji_guess")
     await bot.load_extension("cogs.games.W_Y_R")
+    await bot.load_extension("cogs.games.K_O_V")
 
     await bot.load_extension("cogs.Moderation.ban")
     await bot.load_extension("cogs.Moderation.kick")
