@@ -30,6 +30,7 @@
 - **Lyrics** — Guess the song from a lyric line
 - **Emoji Decode** — Decode intuitive emoji puzzles
 - **RPS** — Rock Paper Scissors with a twist
+- **Would You Rather**  — Asks Would You Rather questions (integrated with AI)
 
 All games support:
 - ✅ Slash commands
